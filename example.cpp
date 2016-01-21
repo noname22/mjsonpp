@@ -5,6 +5,8 @@
 
 void TraversePrint(MJson::ElementPtr root, int depth)
 {
+	bool comma = false;
+
 	switch(root->type){
 		case MJson::ETDict:
 			std::cout << "{" << std::endl;
@@ -18,10 +20,14 @@ void TraversePrint(MJson::ElementPtr root, int depth)
 
 		case MJson::ETList:
 			std::cout << "[" << std::endl;
+			comma = false;
 			for(auto& val : root->AsList()){
+				if(comma)
+					std::cout << "," << std::endl;
+
+				comma = true;
 				std::cout << std::string(depth + 1, ' ');
 				TraversePrint(val, depth + 1);
-				std::cout << "," << std::endl;
 			}
 			std::cout << std::string(depth, ' ') << "]";
 			break;
