@@ -34,9 +34,9 @@ namespace MJson
 		public:
 		ElemType type;
 
-		virtual const std::map<std::string, ElementPtr>& AsDict() = 0;
-		virtual const std::vector<ElementPtr>& AsList() = 0;
-		virtual const std::string& AsStr() = 0;
+		virtual std::map<std::string, ElementPtr>& AsDict() = 0;
+		virtual std::vector<ElementPtr>& AsList() = 0;
+		virtual std::string& AsStr() = 0;
 		virtual int64_t AsInt() = 0;
 		virtual double AsFloat() = 0;
 		virtual bool AsBool() = 0;
@@ -45,8 +45,7 @@ namespace MJson
 	class Parser
 	{
 		public:
-		ElementPtr root;
-		virtual void Parse(ReadCharFn) = 0;
+		virtual ElementPtr Parse(ReadCharFn) = 0;
 
 		static ParserPtr Create();
 	};
