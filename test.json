@@ -1,0 +1,10 @@
+{
+	"somestuff": "a string",
+	"some more stuff": "another string",
+	"a boolean": true,
+	"a boolean2": false,
+	"an int": 113,
+	"a float": 1.23,
+	"a float": .23,
+	"a list": [23, 23, 23, {"stuff":"hello","lel":3.0}]
+}

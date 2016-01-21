@@ -1,3 +1,7 @@
+/*
+	Reads a JSON file from disk and writes its representation to stdout.
+*/
+
 #include <iostream>
 #include <fstream>
 

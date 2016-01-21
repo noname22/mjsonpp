@@ -1,3 +1,0 @@
-template c++11
-cflags std=c++11 Wall g
-name example
