@@ -2,6 +2,7 @@
 #include <sstream>
 #include <cctype>
 #include <queue>
+#include <sstream>
 
 #include "mjson.h"
 
@@ -71,14 +72,14 @@ namespace MJson
 		}
 	};
 
-	class CParser : public Parser
+	class CReader : public Reader
 	{
 		public:
 		int line;
 		ReadCharFn readChar;
 		int peek = 0;
 
-		CParser()
+		CReader()
 		{
 		}
 
@@ -295,7 +296,7 @@ namespace MJson
 			}
 		}
 
-		ElementPtr Parse(ReadCharFn readChar)
+		ElementPtr Read(ReadCharFn readChar)
 		{
 			line = 1;
 			this->readChar = readChar;
@@ -311,10 +312,147 @@ namespace MJson
 
 			throw MJsonException("Expected root element to be either a dictionary ({}) or a list ([]).");
 		}
+		
+		ElementPtr Read(std::istream& stream)
+		{
+			return Read([&]() -> int {
+				char c;
+
+				if(stream.get(c))
+					return c;
+
+				return -1;		
+			});
+		}
+	};
+
+	class StringBufWriter : public std::stringbuf
+	{
+		public:
+		WriteCharFn writeFn;
+
+		StringBufWriter(WriteCharFn writeFn) : writeFn(writeFn)
+		{
+		}
+
+		virtual int sync()
+		{
+			for(char c : str())
+				writeFn(c);
+			
+			str("");
+
+			return 0;
+		}
+	};
+
+	class CWriter: public Writer
+	{
+		public:
+		std::string endl;
+		std::string tab = "  ";
+
+		CWriter()
+		{
+			std::stringstream ss;
+			ss << std::endl;
+			endl = ss.str();
+		}
+
+		virtual void SetTab(const std::string& tab)
+		{
+			this->tab = tab;
+		}
+
+		virtual void SetEndl(const std::string& endl)
+		{
+			this->endl = endl;
+		}
+
+		std::string GenTabs(int num)
+		{
+			std::stringstream ss;
+
+			for(int i = 0; i < num; i++){
+				ss << tab;
+			}
+
+			return ss.str();
+		}
+
+		void TraverseWrite(MJson::ElementPtr root, int depth, std::ostream& stream)
+		{
+			unsigned i = 0;
+
+			switch(root->type){
+				case MJson::ETDict:
+					i = 0;
+					stream << "{" << endl;
+
+					for(auto& kv : root->AsDict()){
+						stream << GenTabs(depth + 1) << "\"" << kv.first << "\": ";
+						TraverseWrite(kv.second, depth + 1, stream);
+						stream << (i++ < root->AsDict().size() - 1 ? "," : "") << endl;
+					}
+					stream << GenTabs(depth) << "}";
+					break;
+
+				case MJson::ETList:
+					i = 0;
+					stream << "[" << endl;
+					for(auto& val : root->AsList()){
+						stream << GenTabs(depth + 1);
+						TraverseWrite(val, depth + 1, stream);
+						stream << (i++ < root->AsList().size() - 1 ? "," : "") << endl;
+					}
+					stream << GenTabs(depth) << "]";
+					break;
+
+				case MJson::ETStr:
+					stream << "\"" << root->AsStr() << "\"";
+					break;
+
+				case MJson::ETInt:
+					stream << root->AsInt();
+					break;
+
+				case MJson::ETFloat:
+					stream << root->AsFloat();
+					break;
+
+				case MJson::ETBool:
+					stream << (root->AsBool() ? "true" : "false");
+					break;
+
+				default:
+					break;
+			}
+
+			stream.flush();
+		}
+
+		void Write(ElementPtr root, WriteCharFn writeFn)
+		{
+			StringBufWriter buf(writeFn);
+			std::ostream stream(&buf);
+			Write(root, stream);
+		}
+		
+		void Write(ElementPtr root, std::ostream& stream)
+		{
+			TraverseWrite(root, 0, stream);
+			stream << endl;
+			stream.flush();
+		}
 	};
 		
-	ParserPtr Parser::Create()
+	ReaderPtr Reader::Create()
 	{
-		return std::make_shared<CParser>();
+		return std::make_shared<CReader>();
+	}
+	
+	WriterPtr Writer::Create()
+	{
+		return std::make_shared<CWriter>();
 	}
 }

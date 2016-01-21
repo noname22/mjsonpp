@@ -3,58 +3,6 @@
 
 #include "mjson.h"
 
-void TraversePrint(MJson::ElementPtr root, int depth)
-{
-	bool comma = false;
-
-	switch(root->type){
-		case MJson::ETDict:
-			std::cout << "{" << std::endl;
-			for(auto& kv : root->AsDict()){
-				std::cout << std::string(depth + 1, ' ') << "\"" << kv.first << "\": ";
-				TraversePrint(kv.second, depth + 1);
-				std::cout << "," << std::endl;
-			}
-			std::cout << std::string(depth, ' ') << "}";
-			break;
-
-		case MJson::ETList:
-			std::cout << "[" << std::endl;
-			comma = false;
-
-			for(auto& val : root->AsList()){
-				if(comma)
-					std::cout << "," << std::endl;
-
-				comma = true;
-				std::cout << std::string(depth + 1, ' ');
-				TraversePrint(val, depth + 1);
-			}
-
-			std::cout << std::endl << std::string(depth, ' ') << "]";
-			break;
-
-		case MJson::ETStr:
-			std::cout << "\"" << root->AsStr() << "\"";
-			break;
-
-		case MJson::ETInt:
-			std::cout << root->AsInt();
-			break;
-
-		case MJson::ETFloat:
-			std::cout << root->AsFloat();
-			break;
-
-		case MJson::ETBool:
-			std::cout << (root->AsBool() ? "true" : "false");
-			break;
-
-		default:
-			break;
-	}
-}
-
 int main(int argc, char** argv)
 {
 	if(argc != 2){
@@ -62,21 +10,16 @@ int main(int argc, char** argv)
 		exit(1);
 	}
 
+	// Read a json file and write it to stdout
+
 	std::ifstream file(argv[1]);
 
-	auto parser = MJson::Parser::Create();
+	auto reader = MJson::Reader::Create();
+	auto writer = MJson::Writer::Create();
 
 	try {
-		MJson::ElementPtr root = parser->Parse([&]() -> int {
-			char c;
-			if(file.get(c))
-				return c;
-			return -1;		
-		});
-
-		//std::cout << root->AsDict()["somestuff"]->AsStr() << std::endl;
-		TraversePrint(root, 0);
-		std::cout << std::endl;
+		MJson::ElementPtr root = reader->Read(file);
+		writer->Write(root, std::cout);
 	}
 
 	catch(MJson::MJsonException ex)

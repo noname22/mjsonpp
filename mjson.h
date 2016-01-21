@@ -7,12 +7,15 @@
 #include <functional>
 #include <memory>
 #include <stdexcept>
+#include <ostream>
 
 namespace MJson
 {
 	typedef std::function<int()> ReadCharFn;
+	typedef std::function<void(char)> WriteCharFn;
 	typedef std::shared_ptr<class Element> ElementPtr;
-	typedef std::shared_ptr<class Parser> ParserPtr;
+	typedef std::shared_ptr<class Reader> ReaderPtr;
+	typedef std::shared_ptr<class Writer> WriterPtr;
 	
 	struct MJsonException : public std::runtime_error
 	{
@@ -42,12 +45,26 @@ namespace MJson
 		virtual bool AsBool() = 0;
 	};
 
-	class Parser
+	class Reader
 	{
 		public:
-		virtual ElementPtr Parse(ReadCharFn) = 0;
+		virtual ElementPtr Read(std::istream& stream) = 0;
+		// readCharFn must return 0-255 on success and < 0 on error (eg. -1)
+		virtual ElementPtr Read(ReadCharFn readCharFn) = 0;
 
-		static ParserPtr Create();
+		static ReaderPtr Create();
+	};
+
+	class Writer
+	{
+		public:
+		virtual void SetTab(const std::string& tab) = 0;
+		virtual void SetEndl(const std::string& endl) = 0;
+
+		virtual void Write(ElementPtr root, std::ostream& stream) = 0;
+		virtual void Write(ElementPtr root, WriteCharFn writeCharFn) = 0;
+		
+		static WriterPtr Create();
 	};
 }
 
