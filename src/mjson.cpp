@@ -3,6 +3,8 @@
 #include <cctype>
 #include <queue>
 #include <sstream>
+#include <cstdarg>
+#include <cstdio>
 
 #include "mjson.h"
 
@@ -23,7 +25,7 @@ namespace MJson
 		double floatVal;
 		bool boolVal;
 		
-		virtual std::map<std::string, ElementPtr>& AsDict()
+		std::map<std::string, ElementPtr>& AsDict()
 		{
 			if(type != ETDict)
 				throw MJsonException("not a dictionary");
@@ -31,7 +33,7 @@ namespace MJson
 			return dict;
 		}
 
-		virtual std::vector<ElementPtr>& AsList()
+		std::vector<ElementPtr>& AsList()
 		{
 			if(type != ETList)
 				throw MJsonException("not a list");
@@ -39,7 +41,7 @@ namespace MJson
 			return list;
 		}
 
-		virtual std::string& AsStr()
+		std::string& AsStr()
 		{
 			if(type != ETStr)
 				throw MJsonException("not a string");
@@ -47,7 +49,7 @@ namespace MJson
 			return strVal;
 		}
 		
-		virtual int64_t AsInt()
+		int64_t AsInt()
 		{
 			if(type != ETInt)
 				throw MJsonException("not an int");
@@ -55,7 +57,7 @@ namespace MJson
 			return intVal;
 		}
 
-		virtual double AsFloat()
+		double AsFloat()
 		{
 			if(type != ETFloat)
 				throw MJsonException("not a floating point value");
@@ -63,12 +65,66 @@ namespace MJson
 			return floatVal;
 		}
 
-		virtual bool AsBool()
+		bool AsBool()
 		{
 			if(type != ETBool)
 				throw MJsonException("not a boolean");
 
 			return boolVal;
+		}
+
+		ElementPtr Get(const std::string& path, const std::vector<PathArg> args)
+		{
+			bool nextLiteral = false;
+			bool isArgument = false;
+			auto argIt = args.begin();
+
+			std::stringstream result;
+
+			for(char c : path)
+			{
+				switch(c){
+					case '\\':
+						if(nextLiteral){
+							result << '\\';
+							nextLiteral = false;
+						}else{
+							nextLiteral = true;
+						}
+						break;
+
+					case '%':
+						if(isArgument){
+							result << '%';
+							isArgument = false;
+						}else{
+							isArgument = true;
+						}
+						break;
+
+					case 'v':
+						if(isArgument){
+							isArgument = false;
+							if(argIt->isString){
+								result << argIt->strVal;
+							}else{
+								result << argIt->intVal;
+							}
+							argIt++;
+						}else{
+							result << 'v';
+						}
+						break;
+
+					default:
+						result << c;
+						break;
+				}
+			}
+
+			std::cout << result.str() << std::endl;
+
+			return nullptr;
 		}
 	};
 
@@ -76,6 +132,8 @@ namespace MJson
 	{
 		public:
 		int line;
+		int col;
+
 		ReadCharFn readChar;
 		int peek = 0;
 
@@ -83,17 +141,24 @@ namespace MJson
 		{
 		}
 
+		std::string GetFilePos()
+		{
+			return MSTR("@ line: " << line << ", column: " << col);
+		}
+
 		int ReadChar()
 		{
 			int c = peek;
 			peek = readChar();
+			col++;
 			
 			if(c == '\n'){
+				col = 1;
 				line++;
 			}
 
 			if(c < 0){
-				throw MJsonException(MSTR("unexpected end of file at line: " << line));
+				throw MJsonException(MSTR("unexpected end of file " << GetFilePos()));
 			}
 
 			return c;
@@ -116,7 +181,7 @@ namespace MJson
 
 			while((c = ReadChar()) != ':'){
 				if(c > 32)
-					throw MJsonException(MSTR("expected '\"key\":' at line: " << line));
+					throw MJsonException(MSTR("expected '\"key\":' " << GetFilePos()));
 			}
 		}
 		
@@ -135,10 +200,10 @@ namespace MJson
 				if(ReadChar() == 'a' && ReadChar() == 'l' && ReadChar() == 's' && ReadChar() == 'e')
 					return false;
 				else
-					throw MJsonException(MSTR("error parsing boolean at line: " << line));
+					throw MJsonException(MSTR("error parsing boolean " << GetFilePos()));
 			}
 
-			throw MJsonException(MSTR("error parsing boolean at line: " << line));
+			throw MJsonException(MSTR("error parsing boolean " << GetFilePos()));
 		}
 
 		ElemType ParseNumber(int64_t& i, double& f)
@@ -174,7 +239,7 @@ namespace MJson
 			}
 			catch (std::invalid_argument)
 			{
-				throw MJsonException(MSTR("error parsing number at line: " << line));
+				throw MJsonException(MSTR("error parsing number " << GetFilePos()));
 			}
 		}
 
@@ -218,7 +283,7 @@ namespace MJson
 					return ParseList();
 				}
 
-				throw MJsonException(MSTR("expected value at line: " << line));
+				throw MJsonException(MSTR("expected value " << GetFilePos()));
 			}
 
 			return elem;
@@ -258,7 +323,7 @@ namespace MJson
 					continue;
 				}
 
-				throw MJsonException(MSTR("expected key for a value ('\"key\":') or end of dictionary ('}') at line: " << line));
+				throw MJsonException(MSTR("expected key for a value ('\"key\":') or end of dictionary ('}') " << GetFilePos()));
 			}
 		}
 
@@ -292,13 +357,14 @@ namespace MJson
 					continue;
 				}
 
-				throw MJsonException(MSTR("expected a value or end of list (']') at line: " << line));
+				throw MJsonException(MSTR("expected a value or end of list (']') " << GetFilePos()));
 			}
 		}
 
 		ElementPtr Read(ReadCharFn readChar)
 		{
 			line = 1;
+			col = 1;
 			this->readChar = readChar;
 			ReadChar(); // set up peek
 

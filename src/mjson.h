@@ -32,6 +32,22 @@ namespace MJson
 		ETBool,
 	};
 
+	class PathArg
+	{
+		friend class CElement;
+
+		protected:
+		bool isString;
+		std::string strVal;
+		int64_t intVal;
+
+		public:
+		PathArg(const char* strVal) : isString(true), strVal(strVal) {}
+		PathArg(const std::string& strVal) : isString(true), strVal(strVal) {}
+		PathArg(int64_t intVal) : isString(false), intVal(intVal) {}
+		PathArg(int intVal) : isString(false), intVal(intVal) {}
+	};
+
 	class Element
 	{
 		public:
@@ -43,6 +59,8 @@ namespace MJson
 		virtual int64_t AsInt() = 0;
 		virtual double AsFloat() = 0;
 		virtual bool AsBool() = 0;
+
+		virtual ElementPtr Get(const std::string& path, const std::vector<PathArg> args = {}) = 0;
 	};
 
 	class Reader

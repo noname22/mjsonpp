@@ -1,4 +1,4 @@
 template c++11
 cflags std=c++11 Wall g I../../src
-name json-echo
+name read
 sourcedir . ../../src
