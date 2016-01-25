@@ -73,6 +73,47 @@ namespace MJson
 			return boolVal;
 		}
 
+		ElementPtr GetT(const std::vector<std::string>& path, unsigned idx)
+		{
+			if(isdigit(path[idx][0])){
+				long intVal = stol(path[idx]);
+
+				if(idx < path.size() - 1)
+					return std::static_pointer_cast<CElement>(AsList().at(intVal))->GetT(path, idx + 1);
+
+				return AsList().at(intVal);
+			}
+
+			if(idx < path.size() - 1)
+				return std::static_pointer_cast<CElement>(AsDict()[path[idx]])->GetT(path, idx + 1);
+
+			return AsDict()[path[idx]];
+		}
+
+		ElementPtr GetInternal(const std::string& path)
+		{
+			std::vector<std::string> vPath;
+			char lastChar = 0;
+
+			std::string item;
+
+			for(char c : path)
+			{
+				if(c == '/' && lastChar != '\\'){
+					vPath.push_back(item);
+					item = "";
+				}else{
+					item.push_back(c);
+				}
+
+				lastChar = c;
+			}
+
+			vPath.push_back(item);
+
+			return GetT(vPath, 0);
+		}
+
 		ElementPtr Get(const std::string& path, const std::vector<PathArg> args)
 		{
 			bool nextLiteral = false;
@@ -80,6 +121,8 @@ namespace MJson
 			auto argIt = args.begin();
 
 			std::stringstream result;
+
+			ElementPtr ret = nullptr;
 
 			for(char c : path)
 			{
@@ -122,9 +165,7 @@ namespace MJson
 				}
 			}
 
-			std::cout << result.str() << std::endl;
-
-			return nullptr;
+			return GetInternal(result.str());
 		}
 	};
 
