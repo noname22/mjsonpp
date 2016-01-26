@@ -60,6 +60,14 @@ namespace MJson
 		virtual double AsFloat() = 0;
 		virtual bool AsBool() = 0;
 
+		// Get element by path, keys and indices separated by slash (/)
+		// eg. "properties/0" to get property 0, where root is a dictionary and properties is a list
+		//   %v denotes an argument, which can be an int or a string, eg. {3, "hello"}
+		//   %% denotes a literal %,
+		//   backslash is used for escaping the next char, but since backslash is also used to escape
+		//   in c++ string literals, two must be used (\\)
+		//   any argument starting with a digit is considered an index and list type is assumed
+
 		virtual ElementPtr Get(const std::string& path, const std::vector<PathArg> args = {}) = 0;
 	};
 

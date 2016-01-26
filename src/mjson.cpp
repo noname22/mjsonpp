@@ -131,7 +131,12 @@ namespace MJson
 			vPath.push_back(item);
 
 			try {
-				return GetT(vPath, 0);
+				ElementPtr ret = GetT(vPath, 0);
+
+				if(ret == nullptr)
+					throw MJsonException(item);
+
+				return ret;
 			}
 			
 			catch (MJsonException ex)
@@ -146,8 +151,6 @@ namespace MJson
 			auto argIt = args.begin();
 
 			std::stringstream result;
-
-			ElementPtr ret = nullptr;
 
 			for(char c : path)
 			{

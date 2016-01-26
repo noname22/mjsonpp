@@ -91,7 +91,8 @@ bool TestPathsEscaping()
 		"{\n"
 			"\"/\": {"
 				"\"%v\": 123,\n"
-			"}"
+				"\"\\\": 456,\n"
+			"},"
 		"}\n";
 
 	auto reader = MJson::Reader::Create();
@@ -100,6 +101,7 @@ bool TestPathsEscaping()
 		MJson::ElementPtr root = reader->Read(stream);
 
 		T_ASSERT(root->Get("\\//%%v")->AsInt() == 123);
+		T_ASSERT(root->Get("\\//\\\\")->AsInt() == 456);
 	}
 
 	catch(MJson::MJsonException ex)
