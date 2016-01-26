@@ -78,14 +78,26 @@ namespace MJson
 			if(isdigit(path[idx][0])){
 				long intVal = stol(path[idx]);
 
-				if(idx < path.size() - 1)
-					return std::static_pointer_cast<CElement>(AsList().at(intVal))->GetT(path, idx + 1);
+				if(idx < path.size() - 1){
+					CElementPtr e = std::static_pointer_cast<CElement>(AsList().at(intVal));
+
+					if(e == nullptr)
+						throw MJsonException(path[idx]);
+
+					return e->GetT(path, idx + 1);
+				}
 
 				return AsList().at(intVal);
 			}
 
-			if(idx < path.size() - 1)
-				return std::static_pointer_cast<CElement>(AsDict()[path[idx]])->GetT(path, idx + 1);
+			if(idx < path.size() - 1){
+				CElementPtr e = std::static_pointer_cast<CElement>(AsDict()[path[idx]]);
+
+				if(e == nullptr)
+					throw MJsonException(path[idx]);
+
+				return e->GetT(path, idx + 1);
+			}
 
 			return AsDict()[path[idx]];
 		}
@@ -93,30 +105,43 @@ namespace MJson
 		ElementPtr GetInternal(const std::string& path)
 		{
 			std::vector<std::string> vPath;
-			char lastChar = 0;
+			bool nextLiteral = false;
 
 			std::string item;
 
 			for(char c : path)
 			{
-				if(c == '/' && lastChar != '\\'){
+				if(c == '\\' && !nextLiteral)
+				{
+					nextLiteral = true;
+				}
+				else if(c == '/' && !nextLiteral)
+				{
 					vPath.push_back(item);
 					item = "";
-				}else{
-					item.push_back(c);
+					nextLiteral = false;
 				}
-
-				lastChar = c;
+				else
+				{
+					item.push_back(c);
+					nextLiteral = false;
+				}
 			}
 
 			vPath.push_back(item);
 
-			return GetT(vPath, 0);
+			try {
+				return GetT(vPath, 0);
+			}
+			
+			catch (MJsonException ex)
+			{
+				throw MJsonException(MSTR("invalid path, '" << path << "': " << ex.what()));
+			}
 		}
 
 		ElementPtr Get(const std::string& path, const std::vector<PathArg> args)
 		{
-			bool nextLiteral = false;
 			bool isArgument = false;
 			auto argIt = args.begin();
 
@@ -127,15 +152,6 @@ namespace MJson
 			for(char c : path)
 			{
 				switch(c){
-					case '\\':
-						if(nextLiteral){
-							result << '\\';
-							nextLiteral = false;
-						}else{
-							nextLiteral = true;
-						}
-						break;
-
 					case '%':
 						if(isArgument){
 							result << '%';
@@ -148,6 +164,11 @@ namespace MJson
 					case 'v':
 						if(isArgument){
 							isArgument = false;
+
+							if(argIt >= args.end()){
+								throw MJsonException("%v in path but not enough parameters given");
+							}
+
 							if(argIt->isString){
 								result << argIt->strVal;
 							}else{
@@ -501,6 +522,7 @@ namespace MJson
 						TraverseWrite(kv.second, depth + 1, stream);
 						stream << (i++ < root->AsDict().size() - 1 ? "," : "") << endl;
 					}
+
 					stream << GenTabs(depth) << "}";
 					break;
 
