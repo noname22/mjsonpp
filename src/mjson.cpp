@@ -280,7 +280,7 @@ namespace MJson
 			{
 				int c = peek;
 
-				if(!(c == '.' || isdigit(c)))
+				if(!(c == '.' || isdigit(c) || c == '-'))
 					break;
 
 				if(c == '.')
@@ -304,7 +304,7 @@ namespace MJson
 			}
 			catch (std::invalid_argument)
 			{
-				throw MJsonException(MSTR("error parsing number " << GetFilePos()));
+				throw MJsonException(MSTR("error parsing number: \"" << num << "\" " << GetFilePos()));
 			}
 		}
 
@@ -333,7 +333,7 @@ namespace MJson
 					break;
 				}
 
-				else if(c == '.' || isdigit(c)){
+				else if(c == '-' || c == '.' || isdigit(c)){
 					elem->type = ParseNumber(elem->intVal, elem->floatVal);
 					break;
 				}
